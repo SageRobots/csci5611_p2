@@ -20,14 +20,14 @@ Node[][] nodes = new Node[NODE_WIDTH][NODE_HEIGHT];
 float link_length = 0.2;
 
 // Gravity
-Vec2 gravity = new Vec2(0, 10);
+Vec3 gravity = new Vec3(0, 10, 0);
 
 float scale = 100.0;
 float dt = 0.07;
 Vec3 base_pos = new Vec3(500 / scale, 1, 0);
 
-int num_substeps = 100;
-int num_relaxation_steps = 100;
+int num_substeps = 10;
+int num_relaxation_steps = 10;
 float length_error;
 float energy;
 float run_time = 30;
@@ -51,7 +51,7 @@ void setup() {
 
 void draw() {
     // update nodes for num_substeps
-    // for (int i = 0; i < num_substeps; i++) update(dt / num_substeps);
+    for (int i = 0; i < num_substeps; i++) update(dt / num_substeps);
     
     background(255);
 
@@ -59,7 +59,7 @@ void draw() {
     for (int i = 0; i < NODE_WIDTH - 1; i++) {
         for (int j = 0; j < NODE_HEIGHT - 1; j++) {
             // draw triangle
-            fill(0, 255, 0);
+            fill(0, 200, 200);
             beginShape(TRIANGLES);
             vertex(nodes[i][j].pos.x * scale, nodes[i][j].pos.y * scale, nodes[i][j].pos.z * scale);
             vertex(nodes[i][j+1].pos.x * scale, nodes[i][j+1].pos.y * scale, nodes[i][j+1].pos.z * scale);
@@ -85,40 +85,43 @@ void draw() {
     // }
 }
 
-// void update(float dt) {
-//     // update node positions
-//     for (int i = 1; i < nodes.length; i++) {
-//         // save last position
-//         nodes[i].last_pos = nodes[i].pos;
-//         // update position
-//         nodes[i].vel = nodes[i].vel.add_new(gravity.mul_new(dt));
-//         nodes[i].pos = nodes[i].pos.add_new(nodes[i].vel.mul_new(dt));
-//     }
+void update(float dt) {
+    // update node positions
+    for (int i = 0; i < NODE_WIDTH; i++) {
+        for (int j = 1; j < NODE_HEIGHT; j++) {
+            // save last position
+            nodes[i][j].last_pos = nodes[i][j].pos;
+            // update velocity with gravity
+            nodes[i][j].vel = nodes[i][j].vel.add_new(gravity.mul_new(dt));
+            // update position with velocity
+            nodes[i][j].pos = nodes[i][j].pos.add_new(nodes[i][j].vel.mul_new(dt));
+        }
+    }
 
-//     // relaxation
-//     for (int i = 0; i < num_relaxation_steps; i++) relax();
+    // relaxation
+    for (int i = 0; i < num_relaxation_steps; i++) relax();
 
-//     // update node velocities
-//     for (int i = 1; i < nodes.length; i++) {
-//         nodes[i].vel = nodes[i].pos.subtract_new(nodes[i].last_pos).mul_new(1.0 / dt);
-//     }
-// }
+    // update node velocities
+    // for (int i = 1; i < nodes.length; i++) {
+    //     nodes[i].vel = nodes[i].pos.subtract_new(nodes[i].last_pos).mul_new(1.0 / dt);
+    // }
+}
 
-// void relax() {
-//     // update nodes using position based dynamics, leave node 0 fixed
-//     for (int i = 1; i < nodes.length; i++) {
-//         // constrain to link length
-//         Vec2 delta = nodes[i].pos.subtract_new(nodes[i-1].pos);
-//         // print delta
-//         // println(delta.x + " " + delta.y);
-//         float delta_len = delta.length();
-//         float correction = delta_len - link_length;
-//         // print correction
-//         // println(correction);
-//         Vec2 delta_normalized = delta.normalize();
-//         nodes[i].pos = nodes[i].pos.subtract_new(delta_normalized.mul_new(correction / 2.0));
-//         nodes[i-1].pos = nodes[i-1].pos.add_new(delta_normalized.mul_new(correction / 2.0));
-//         // move base back to original position
-//         nodes[0].pos = base_pos;
-//     }
-// }
+void relax() {
+    // update nodes using position based dynamics
+    for (int i = 0; i < NODE_WIDTH; i++) {
+        for (int j = 1; j < NODE_HEIGHT; j++) {
+            Vec3 delta = nodes[i][j].pos.subtract_new(nodes[i][j - 1].pos);
+            float delta_len = delta.length();
+            float correction = delta_len - link_length;
+            Vec3 delta_normalized = delta.normalize();
+            nodes[i][j].pos = nodes[i][j].pos.subtract_new(delta_normalized.mul_new(correction / 2.0));
+            nodes[i][j-1].pos = nodes[i][j-1].pos.add_new(delta_normalized.mul_new(correction / 2.0));
+        }
+    }
+    // move base row back to original position
+    for (int i = 0; i < NODE_HEIGHT; i++) {
+        nodes[i][0].pos.y = 1;
+        nodes[i][0].pos.x = 5;
+    }
+}
