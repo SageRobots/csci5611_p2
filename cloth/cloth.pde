@@ -75,7 +75,7 @@ void draw() {
     directionalLight(128, 128, 128, -1/sqrt(3), 1/sqrt(3), -1/sqrt(3));
 
     // draw a sphere to collide with
-    fill(255, 0, 0);
+    fill(100, 0, 200);
     pushMatrix();
     translate(sphere1.pos.x * scale, sphere1.pos.y * scale, sphere1.pos.z * scale);
     sphere(sphere1.radius * scale);
@@ -126,12 +126,6 @@ void update(float dt) {
             if (delta_len < sphere1.radius * clip_factor) {
                 // move node to surface of sphere
                 nodes[i][j].pos = sphere1.pos.add_new(delta.normalize().mul_new(sphere1.radius * clip_factor));
-                // calculate velocity of node in direction of surface normal
-                // Vec3 vel_normal = nodes[i][j].vel.project(delta.normalize());
-                // calculate velocity of node in direction of surface tangent
-                // Vec3 vel_tangent = nodes[i][j].vel.subtract_new(vel_normal);
-                // calculate velocity of node after collision
-                // nodes[i][j].vel = vel_tangent.subtract_new(vel_normal.mul_new(0.5));
             }
         }
     }
