@@ -22,13 +22,13 @@ class Sphere {
   }
 }
 
-// array of 25 nodes
-int NODE_WIDTH = 10;
-int NODE_HEIGHT = 10;
+// array of nodes
+int NODE_WIDTH = 32;
+int NODE_HEIGHT = 32;
 Node[][] nodes = new Node[NODE_WIDTH][NODE_HEIGHT];
 
 // sphere
-Sphere sphere1 = new Sphere(new Vec3(7, 3, 2), 1);
+Sphere sphere1 = new Sphere(new Vec3(7.0, 3, 2), 1);
 
 // Link length
 float link_length = 4.0 / (NODE_WIDTH - 1);
@@ -42,6 +42,7 @@ Vec3 base_pos = new Vec3(500 / scale, 1, 0);
 
 int num_substeps = 10;
 int num_relaxation_steps = 10;
+float clip_factor = 1.01;
 float length_error;
 float energy;
 float run_time = 30;
@@ -50,7 +51,7 @@ PrintWriter output;
 
 void setup() {
     size(1000, 600, P3D);
-    camera(800.0, 300.0, 1000.0, 500.0, 300.0, 0.0, 
+    camera(1000.0, 300.0, 700.0, 500.0, 300.0, 0.0, 
         0.0, 1.0, 0.0);
     // initial pos of nodes horizontal coming out in z
     for (int i = 0; i < NODE_WIDTH; i++) {
@@ -67,18 +68,24 @@ void draw() {
     // update nodes for num_substeps
     for (int i = 0; i < num_substeps; i++) update(dt / num_substeps);
 
-
-    
     background(255);
     noStroke();
-    lights();
-    directionalLight(51, 102, 126, -1, 0, 0);
+    // lights();
+    ambientLight(128, 128, 128);
+    directionalLight(128, 128, 128, -1/sqrt(3), 1/sqrt(3), -1/sqrt(3));
+
+    // draw a sphere to collide with
+    fill(255, 0, 0);
+    pushMatrix();
+    translate(sphere1.pos.x * scale, sphere1.pos.y * scale, sphere1.pos.z * scale);
+    sphere(sphere1.radius * scale);
+    popMatrix();
 
     // draw triangles for groups of 3 nodes
     for (int i = 0; i < NODE_WIDTH - 1; i++) {
         for (int j = 0; j < NODE_HEIGHT - 1; j++) {
             // draw triangle
-            fill(0, 200, 200);
+            fill(0, 200, 200, 150);
             beginShape(TRIANGLES);
             vertex(nodes[i][j].pos.x * scale, nodes[i][j].pos.y * scale, nodes[i][j].pos.z * scale);
             vertex(nodes[i][j+1].pos.x * scale, nodes[i][j+1].pos.y * scale, nodes[i][j+1].pos.z * scale);
@@ -92,10 +99,6 @@ void draw() {
         }
     }
 
-    // draw a sphere to collide with
-    fill(255, 0, 0);
-    translate(sphere1.pos.x * scale, sphere1.pos.y * scale, sphere1.pos.z * scale);
-    sphere(sphere1.radius * scale);
 }
 
 void update(float dt) {
@@ -115,7 +118,6 @@ void update(float dt) {
     for (int i = 0; i < num_relaxation_steps; i++) relax();
 
     // check for collision with sphere
-    float clip_factor = 1.1;
     for (int i = 0; i < NODE_WIDTH; i++) {
         for (int j = 0; j < NODE_HEIGHT; j++) {
             // see if node is inside sphere
