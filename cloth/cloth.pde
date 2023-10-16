@@ -37,7 +37,7 @@ float link_length = 4.0 / (NODE_WIDTH - 1);
 Vec3 gravity = new Vec3(0, 10, 0);
 
 float scale = 100.0;
-float dt = 0.07;
+float dt = 0.05;
 Vec3 base_pos = new Vec3(500 / scale, 1, 0);
 
 int num_substeps = 10;
