@@ -1,4 +1,4 @@
-int n = 128;   // number of cells
+int n = 64;   // number of cells
 float dx = 1000.0 / (float)n; // length of each cell
 float dt = 0.05;
   
@@ -6,17 +6,19 @@ float[] h = new float[n]; // height
 float[] hu = new float[n]; // Momentum
 float scale = 20.0;
 
-int num_substeps = 10;
+int num_substeps = 20;
 boolean paused = true;
   
 void setup() {
     size(1000, 600, P3D);
     // Initalize Simulation
     for (int i = 0; i < n; i++) {
-        h[i] = 2*i/(float)n + 1;
-        // print height
-        println(h[i]);
+        h[i] = 1;
     }
+    // big wave in the middle
+    h[n/2-1] = 3;
+    h[n/2] = 3;
+    h[n/2+1] = 3;
 
     frameRate(1.0 / dt);
 }
@@ -27,6 +29,9 @@ void draw() {
         for (int i = 0; i < num_substeps; i++) update(dt);
         // paused = true;
         background(255);
+        // lights();
+        ambientLight(128, 128, 128);
+        directionalLight(128, 128, 128, 1, 1, 0);
         // Simulate
         // Draw Water
         stroke(0, 0, 255);
@@ -37,22 +42,37 @@ void draw() {
             // x spans from 0 to width
             float x1 = i * width / (float)(n - 1);
             float x2 = (i + 1) * width / (float)(n - 1);
-            float y1 = height / 2.0 - (h[i]-1)*scale;
-            float y2 = height / 2.0 - (h[i+1]-1)*scale;
+            float y1 = height - (h[i]-1)*scale - 100;
+            float y2 = height - (h[i+1]-1)*scale - 100;
             float x3 = x2;
             float x4 = x1;
             float y3 = height;
             float y4 = height;
+            float z1 = 0;
+            float z2 = -50 * scale;
             // print y1s
             // println(y1);
             // line(x1, y1, x2, y2);
-            quad(x1, y1, x2, y2, x3, y3, x4, y4);
+            // quad(x1, y1, x2, y2, x3, y3, x4, y4);
+            // draw 3d shape
+            beginShape(QUADS);
+            // front
+            vertex(x1, y1, z1);
+            vertex(x2, y2, z1);
+            vertex(x3, y3, z1);
+            vertex(x4, y4, z1);
+            // top
+            vertex(x1, y1, z1);
+            vertex(x2, y2, z1);
+            vertex(x2, y2, z2);
+            vertex(x1, y1, z2);
+            endShape();
         }
     }
 }  
   
 void update(float dt) {
-    float g = 100.0;  // gravity
+    float g = 10.0;  // gravity
     float damp = 0.9;
     
     float[] dhdt = new float[n]; // Height derivative
