@@ -1,12 +1,12 @@
-int n = 40;   // number of cells
+int n = 128;   // number of cells
 float dx = 1000.0 / (float)n; // length of each cell
 float dt = 0.05;
   
 float[] h = new float[n]; // height
 float[] hu = new float[n]; // Momentum
-float scale = 10.0;
+float scale = 20.0;
 
-int num_substeps = 1;
+int num_substeps = 10;
 boolean paused = true;
   
 void setup() {
@@ -14,6 +14,8 @@ void setup() {
     // Initalize Simulation
     for (int i = 0; i < n; i++) {
         h[i] = 2*i/(float)n + 1;
+        // print height
+        println(h[i]);
     }
 
     frameRate(1.0 / dt);
@@ -29,15 +31,22 @@ void draw() {
         // Draw Water
         stroke(0, 0, 255);
         strokeWeight(10);
+        noStroke();
+        fill(0, 0, 255);
         for (int i = 0; i < n-1; i++) {
             // x spans from 0 to width
             float x1 = i * width / (float)(n - 1);
             float x2 = (i + 1) * width / (float)(n - 1);
             float y1 = height / 2.0 - (h[i]-1)*scale;
             float y2 = height / 2.0 - (h[i+1]-1)*scale;
+            float x3 = x2;
+            float x4 = x1;
+            float y3 = height;
+            float y4 = height;
             // print y1s
             // println(y1);
-            line(x1, y1, x2, y2);
+            // line(x1, y1, x2, y2);
+            quad(x1, y1, x2, y2, x3, y3, x4, y4);
         }
     }
 }  
