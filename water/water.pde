@@ -98,7 +98,7 @@ void update(float dt) {
         
         // Compute dhu/dt (mid)   
         float dhu2dx_mid = (hu[i+1]*hu[i+1]/h[i+1] - hu[i]*hu[i]/h[i])/dx;
-        float dgh2dx_mid = (g*h[i+1]*h[i+1] - h[i]*h[i])/dx;
+        float dgh2dx_mid = g*(h[i+1]*h[i+1] - h[i]*h[i])/dx;
         dhudt_mid[i] = -(dhu2dx_mid + 0.5*dgh2dx_mid);
         // print dhudt_mid[i]
         // println("dhudt_mid[i]: " + dhudt_mid[i]);
