@@ -1,5 +1,6 @@
 int n = 32;   // number of cells
 float dx = 1000.0 / (float)n; // length of each cell
+float dy = dx;
 float dt = 0.05;
   
 float[][] h = new float[n][n]; // height
@@ -19,10 +20,25 @@ void setup() {
             h[i][j] = 1.0;
         }
     }
-    // big wave in the middle
-    for (int i = n/2-5; i < n/2+5; i++) {
-        for (int j = n/2-5; j < n/2+5; j++) {
-            h[n/2][n/2] = 3.0;
+
+    // vertical wave
+    // for (int i = n/2-1; i < n/2+2; i++) {
+    //     for (int j = 0; j < n; j++) {
+    //         h[i][j] = 3.0;
+    //     }
+    // }
+
+    // horizontal wave
+    // for (int i = n/2-1; i < n/2+2; i++) {
+    //     for (int j = 0; j < n; j++) {
+    //         h[j][i] = 3.0;
+    //     }
+    // }
+
+    // wave in the center
+    for (int i = n/2-1; i < n/2+2; i++) {
+        for (int j = n/2-1; j < n/2+2; j++) {
+            h[j][i] = 3.0;
         }
     }
 
@@ -86,7 +102,7 @@ void draw() {
   
 void update(float dt) {
     float g = 10.0;  // gravity
-    float damp = 0.9;
+    float damp = 1.0;
     
     float[][] dhdt = new float[n][n]; // Height derivative
     float[][] dhudt = new float[n][n];  // Momentum derivative in x direction
@@ -99,15 +115,29 @@ void update(float dt) {
     float[][] dhdt_mid = new float[n][n]; // Height derivative (midpoint)
     float[][] dhudt_mid = new float[n][n];  // Momentum derivative (midpoint)
     float[][] dhvdt_mid = new float[n][n];  // Momentum derivative (midpoint) in y direction
+
+    // zero out certain terms for testing
+    float x = 1;
+    float y = 1;
+    float diag = 1;
   
     // Compute midpoint heights and momentums
     for (int i = 0; i < n-1; i++) {
         for (int j = 0; j < n-1; j++) {
-            h_mid[i][j] = (h[i][j] + h[i+1][j] + h[i][j+1]) / 3.0;
+            // h_mid[i][j] = (h[i][j] + h[i+1][j] + h[i][j+1] + h[i+1][j+1]) / 4.0;
+            if (y == 0) {
+                h_mid[i][j] = (h[i][j] + h[i+1][j]) / 2.0;
+            } else if (x == 0) {
+                h_mid[i][j] = (h[i][j] + h[i][j+1]) / 2.0;
+            } else {
+                h_mid[i][j] = (2*h[i][j] + h[i+1][j] + h[i][j+1]) / 4.0;
+            }
             // x direction
             hu_mid[i][j] = (hu[i][j] + hu[i+1][j]) / 2.0;
+            hu_mid[i][j] *= x;
             // y direction
             hv_mid[i][j] = (hv[i][j] + hv[i][j+1]) / 2.0;
+            hv_mid[i][j] *= y;
         }
     }
   
@@ -116,19 +146,23 @@ void update(float dt) {
         for (int j = 0; j < n-1; j++) {
             // Compute dh/dt (mid)
             float dhudx_mid = (hu[i+1][j] - hu[i][j])/dx;
-            float dhvdx_mid = (hv[i][j+1] - hv[i][j])/dx;
-            dhdt_mid[i][j] = -dhudx_mid - dhvdx_mid;
+            dhudx_mid *= x;
+            float dhvdy_mid = (hv[i][j+1] - hv[i][j])/dy;
+            dhvdy_mid *= y;
+            dhdt_mid[i][j] = -dhudx_mid - dhvdy_mid;
             
             // Compute dhu/dt (mid)   
             float dhu2dx_mid = (hu[i+1][j]*hu[i+1][j]/h[i+1][j] - hu[i][j]*hu[i][j]/h[i][j])/dx;
             float dgh2dx_mid = g*(h[i+1][j]*h[i+1][j] - h[i][j]*h[i][j])/dx;
-            float dhuvdy_mid = (hu[i+1][j]*hv[i][j+1]/h[i+1][j] - hu[i][j]*hv[i][j]/h[i][j])/dx;
+            float dhuvdy_mid = (hu[i][j+1]*hv[i][j+1]/h[i][j+1] - hu[i][j]*hv[i][j]/h[i][j])/dy;
+            dhuvdy_mid *= x*y*diag;
             dhudt_mid[i][j] = -(dhu2dx_mid + 0.5*dgh2dx_mid) - dhuvdy_mid;
 
             // compute dhv/dt (mid)
-            float dhv2dy_mid = (hv[i][j+1]*hv[i][j+1]/h[i][j+1] - hv[i][j]*hv[i][j]/h[i][j])/dx;
-            float dgh2dy_mid = g*(h[i][j+1]*h[i][j+1] - h[i][j]*h[i][j])/dx;
-            float dhuvdx_mid = (hu[i+1][j]*hv[i][j+1]/h[i+1][j] - hu[i][j]*hv[i][j]/h[i][j])/dx;
+            float dhv2dy_mid = (hv[i][j+1]*hv[i][j+1]/h[i][j+1] - hv[i][j]*hv[i][j]/h[i][j])/dy;
+            float dgh2dy_mid = g*(h[i][j+1]*h[i][j+1] - h[i][j]*h[i][j])/dy;
+            float dhuvdx_mid = (hu[i+1][j]*hv[i+1][j]/h[i+1][j] - hu[i][j]*hv[i][j]/h[i][j])/dx;
+            dhuvdx_mid *= x*y*diag;
             dhvdt_mid[i][j] = -(dhv2dy_mid + 0.5*dgh2dy_mid) - dhuvdx_mid;
         }
     }
@@ -147,19 +181,23 @@ void update(float dt) {
         for (int j = 1; j < n-1; j++) {
             // Compute dh/dt
             float dhudx = (hu_mid[i][j] - hu_mid[i-1][j])/dx;
-            float dhvdy = (hv_mid[i][j] - hv_mid[i][j-1])/dx;
+            dhudx *= x;
+            float dhvdy = (hv_mid[i][j] - hv_mid[i][j-1])/dy;
+            dhvdy *= y;
             dhdt[i][j] = -dhudx - dhvdy;
             
             // Compute dhu/dt
             float dhu2dx = (hu_mid[i][j]*hu_mid[i][j]/h_mid[i][j] - hu_mid[i-1][j]*hu_mid[i-1][j]/h_mid[i-1][j])/dx;
             float dgh2dx = g*(h_mid[i][j]*h_mid[i][j] - h_mid[i-1][j]*h_mid[i-1][j])/dx;
-            float dhuvdy = (hu_mid[i][j]*hv_mid[i][j]/h_mid[i][j] - hu_mid[i-1][j]*hv_mid[i][j-1]/h_mid[i][j-1])/dx;
+            float dhuvdy = (hu_mid[i][j]*hv_mid[i][j]/h_mid[i][j] - hu_mid[i][j-1]*hv_mid[i][j-1]/h_mid[i][j-1])/dy;
+            dhuvdy *= x*y*diag;
             dhudt[i][j] = -(dhu2dx + 0.5*dgh2dx) - dhuvdy;
 
             // compute dhv/dt
-            float dhv2dy = (hv_mid[i][j]*hv_mid[i][j]/h_mid[i][j] - hv_mid[i][j-1]*hv_mid[i][j-1]/h_mid[i][j-1])/dx;
-            float dgh2dy = g*(h_mid[i][j]*h_mid[i][j] - h_mid[i][j-1]*h_mid[i][j-1])/dx;
-            float dhuvdx = (hu_mid[i][j]*hv_mid[i][j]/h_mid[i][j] - hu_mid[i-1][j]*hv_mid[i][j-1]/h_mid[i-1][j])/dx;
+            float dhv2dy = (hv_mid[i][j]*hv_mid[i][j]/h_mid[i][j] - hv_mid[i][j-1]*hv_mid[i][j-1]/h_mid[i][j-1])/dy;
+            float dgh2dy = g*(h_mid[i][j]*h_mid[i][j] - h_mid[i][j-1]*h_mid[i][j-1])/dy;
+            float dhuvdx = (hu_mid[i][j]*hv_mid[i][j]/h_mid[i][j] - hu_mid[i-1][j]*hv_mid[i-1][j]/h_mid[i-1][j])/dx;
+            dhuvdx *= x*y*diag;
             dhvdt[i][j] = -(dhv2dy + 0.5*dgh2dy) - dhuvdx;
         }
     }
@@ -167,9 +205,9 @@ void update(float dt) {
     // Update values (non-midpoint) based on full timestep
     for (int i = 1; i < n-1; i++) {
         for (int j = 1; j < n-1; j++) {
-            h[i][j] += dhdt[i][j]*dt;
-            hu[i][j] += dhudt[i][j]*dt;
-            hv[i][j] += dhvdt[i][j]*dt;
+            h[i][j] += damp * dhdt[i][j]*dt;
+            hu[i][j] += damp * dhudt[i][j]*dt;
+            hv[i][j] += damp * dhvdt[i][j]*dt;
         }
     }
   
