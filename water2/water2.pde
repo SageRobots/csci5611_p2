@@ -1,63 +1,58 @@
-int n = 64;   // number of cells
+int n = 128;   // number of cells
 float dx = 1000.0 / (float)n; // length of each cell
 float dy = dx;
-float dt = 0.05;
+float dt = 0.1;
   
 float[][] h = new float[n][n]; // height
+float[][] h_temp = new float[n+2][n+2]; // height
 float[][] hu = new float[n][n]; // Momentum
 float[][] hv = new float[n][n]; // Momentum in y direction
 float scale = 20.0;
 
 int num_substeps = 30;
 boolean paused = true;
-  
+
+float[][] kernel = new float[3][3];
+float k1 = 1.0;
+float k2 = 300.0;
+float k_sum = 4*k1 + k2;
+
+PShape boat;
+
 void setup() {
     size(1000, 600, P3D);
-    // camera(500, 300, 500, 500, 500, 0, 0, 1, 0);
-    // Initalize Simulation
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = 0; j < n; j++) {
-    //         h[i][j] = 11.0;
-    //     }
-    // }
+    camera(500, -100, 300, 500, 300, -650, 0, 1, 0);
 
-    // vertical wave
-    // for (int i = n/2-1; i < n/2+2; i++) {
-    //     for (int j = 0; j < n; j++) {
-    //         h[i][j] = 3.0;
-    //     }
-    // }
-
-    // horizontal wave
-    // for (int i = n/2-1; i < n/2+2; i++) {
-    //     for (int j = 0; j < n; j++) {
-    //         h[j][i] = 3.0;
-    //     }
-    // }
-
+    kernel[0][0] = 0.0/k_sum;
+    kernel[0][1] = k1/k_sum;
+    kernel[0][2] = 0.0/k_sum;
+    kernel[1][0] = k1/k_sum;
+    kernel[1][1] = k2/k_sum;
+    kernel[1][2] = k1/k_sum;
+    kernel[2][0] = 0.0/k_sum;
+    kernel[2][1] = k1/k_sum;
+    kernel[2][2] = 0.0/k_sum;
     // circle wave
-    int wave_r = 10;
-    int wave_x = 25;
-    int wave_y = n-25;
+    int wave_r = 20;
+    int wave_x = 50;
+    int wave_y = n-50;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             // check if inside circle
             float dist = sqrt((i-wave_x)*(i-wave_x) + (j-wave_y)*(j-wave_y));
             if (dist < wave_r) {
-                h[i][j] = 11.0 + wave_r - dist;
+                h[i][j] = 11.0 + (wave_r - dist) / 2.0;
             } else {
                 h[i][j] = 11.0;
             }
         }
     }
 
-    // for (int i = n/2-wave; i <= n/2+wave; i++) {
-    //     for (int j = n/2-wave; j <= n/2+wave; j++) {
-    //         h[j][i] = 13.0;
-    //     }
-    // }
+    frameRate(30.0);
 
-    frameRate(1.0 / dt);
+    boat = loadShape("duck.obj");
+    boat.scale(40);
+    boat.setFill(color(255, 255, 0));
 }
 
 void draw() {
@@ -65,39 +60,94 @@ void draw() {
     if (!paused) {
         for (int i = 0; i < num_substeps; i++) update(dt);
         // paused = true;
-        background(255);
+        // background sky blue
+        background(0, 128, 255);
         // lights();
         ambientLight(128, 128, 128);
         directionalLight(128, 128, 128, 1, 1, 0);
-        // Simulate
+        lightSpecular(255, 255, 255);
+        spotLight(255, 255, 255, 375, 100, -1000, 1, 1, 1, PI/2, 2);
+        noStroke();
+
+        // white box for back of tub
+        fill(255, 255, 255);
+        pushMatrix();
+        translate(width/2, height*2-100, -width);
+        box(width, height*3, 50);
+        popMatrix();
+        // white box for left side of tub
+        pushMatrix();
+        translate(0, height*2-100, -width/2 - 25);
+        box(50, height*3, width);
+        popMatrix();
+        // white box for right side of tub 
+        pushMatrix();
+        translate(width, height*2-100, -width/2 - 25);
+        box(50, height*3, width);
+        popMatrix();
+
+        // orange fill
+        fill(255, 128, 0);
+        float box_height;
+        // loop to create 3 buoys
+        for (int i = 0; i < 3; i++) {
+            int cx = (i+1)*n/4;
+            // set box height to height of water at center
+            // compute average height in square under box
+            box_height = 0;
+            for (int k = cx-5; k < cx+5; k++) {
+                for (int l = n/2-5; l < n/2+5; l++) {
+                    box_height += h[k][l];
+                }
+            }
+            box_height /= 100.0;
+            box_height = height - box_height * scale + 50;
+            // translate to center
+            pushMatrix();
+            translate((i+1)*width/4, box_height, -width/2);
+            // set rotation to angle of water at center
+            float dhdx = (h[cx+5][n/2] - h[cx-5][n/2]) / (10*dx);
+            dhdx *= scale;
+            // compute angle
+            float angle = atan2(1, dhdx) - PI/2.0;
+            rotateX(PI/2);
+            rotateY(angle);
+            // repeat for y direction
+            float dhdy = (h[cx][n/2+5] - h[cx][n/2-5]) / (10*dy);
+            dhdy *= scale;
+            float angle_y = atan2(1, dhdy) - PI/2.0;
+            rotateX(angle_y);
+            // box(75,75,75);
+            
+            shape(boat);
+
+            popMatrix();
+        }
         // Draw Water
         stroke(0, 0, 255);
         strokeWeight(10);
         noStroke();
-        fill(0, 0, 255);
         for (int i = 0; i < n-1; i++) {
             for (int j = 0; j < n-1; j++) {
                 // x spans from 0 to width
                 float x1 = i * width / (float)(n - 1);
                 float x2 = (i + 1) * width / (float)(n - 1);
-                float y1 = height - (h[i][j]-1)*scale + 200;
-                float y2 = height - (h[i+1][j]-1)*scale + 200;
+                int offset = 0;
+                float y1 = height - h[i][j]*scale + offset;
+                float y2 = height - h[i+1][j]*scale + offset;
                 float x3 = x2;
                 float x4 = x1;
-                float y3 = height - (h[i+1][j+1]-1)*scale + 200;
-                float y4 = height - (h[i][j+1]-1)*scale + 200;
+                float y3 = height - h[i+1][j+1]*scale + offset;
+                float y4 = height - h[i][j+1]*scale + offset;
                 // z related to j
                 float z1 = j * width / (float)(n - 1);
                 float z2 = (j + 1) * width / (float)(n - 1);
                 z1 = -z1;
                 z2 = -z2;
-                // print zs
-                // println(z1, z2);
-                // print y1s
-                // println(y1);
-                // line(x1, y1, x2, y2);
-                // quad(x1, y1, x2, y2, x3, y3, x4, y4);
                 // draw 3d shape
+                fill(0, 0, 255, 230);
+                specular(255, 255, 255);
+                shininess(1.0);
                 beginShape(QUADS);
                 // front
                 // vertex(x1, y1, z1);
@@ -112,12 +162,14 @@ void draw() {
                 endShape();
             }
         }
+
+
     }
 }  
   
 void update(float dt) {
     float g = 1.0;  // gravity
-    float damp = 0.8;
+    float damp = 1.0;
     
     float[][] dhdt = new float[n][n]; // Height derivative
     float[][] dhudt = new float[n][n];  // Momentum derivative in x direction
@@ -245,13 +297,44 @@ void update(float dt) {
     }
 
     // clamp height and momentum
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = 0; j < n; j++) {
+    //         // h[i][j] = constrain(h[i][j], 8, 13);
+    //         // float plim = 8;
+    //         // hu[i][j] = constrain(hu[i][j], -plim, plim);
+    //         // hv[i][j] = constrain(hv[i][j], -plim, plim);
+    //     }
+    // }
+
+    // smooth height with convolution
+    // float[][] h_new = new float[n][n];
+    // pad h
+    float pad = 11.0;
     for (int i = 0; i < n; i++) {
+        h_temp[i+1][0] = pad;
+        h_temp[i+1][n+1] = pad;
         for (int j = 0; j < n; j++) {
-            // h[i][j] = constrain(h[i][j], 8, 13);
-            // hu[i][j] = constrain(hu[i][j], -10, 10);
-            // hv[i][j] = constrain(hv[i][j], -10, 10);
+            h_temp[i+1][j+1] = h[i][j];
         }
     }
+    for (int j = 0; j < n; j++) {
+        h_temp[0][j+1] = pad;
+        h_temp[n+1][j+1] = pad;
+    }
+
+    // convolve
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            float sum = 0;
+            for (int k = 0; k < 3; k++) {
+                for (int l = 0; l < 3; l++) {
+                    sum += kernel[k][l] * h_temp[i+k][j+l];
+                }
+            }
+            h[i][j] = sum;
+        }
+    }
+
 }
 
 // detect spacebar key
