@@ -193,14 +193,8 @@ void update(float dt) {
     // Compute midpoint heights and momentums
     for (int i = 0; i < n-1; i++) {
         for (int j = 0; j < n-1; j++) {
-            // h_mid[i][j] = (h[i][j] + h[i+1][j] + h[i][j+1] + h[i+1][j+1]) / 4.0;
-            // if (y == 0) {
-                h_midx[i][j] = (h[i][j] + h[i+1][j]) / 2.0;
-            // } else if (x == 0) {
-                h_midy[i][j] = (h[i][j] + h[i][j+1]) / 2.0;
-            // } else {
-                // h_mid[i][j] = (2*h[i][j] + h[i+1][j] + h[i][j+1]) / 4.0;
-            // }
+            h_midx[i][j] = (h[i][j] + h[i+1][j]) / 2.0;
+            h_midy[i][j] = (h[i][j] + h[i][j+1]) / 2.0;
             // x direction
             hu_mid[i][j] = (hu[i][j] + hu[i+1][j]) / 2.0;
             hu_mid[i][j] *= x;
@@ -296,19 +290,6 @@ void update(float dt) {
         hu[n-1][j] = -hu[n-2][j];
     }
 
-    // clamp height and momentum
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = 0; j < n; j++) {
-    //         // h[i][j] = constrain(h[i][j], 8, 13);
-    //         // float plim = 8;
-    //         // hu[i][j] = constrain(hu[i][j], -plim, plim);
-    //         // hv[i][j] = constrain(hv[i][j], -plim, plim);
-    //     }
-    // }
-
-    // smooth height with convolution
-    // float[][] h_new = new float[n][n];
-    // pad h
     float pad = 11.0;
     for (int i = 0; i < n; i++) {
         h_temp[i+1][0] = pad;
