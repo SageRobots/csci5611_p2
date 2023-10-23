@@ -176,6 +176,21 @@ void draw() {
              spring.node2.pos.x * scale, spring.node2.pos.y * scale, spring.node2.pos.z * scale);
     }
 
+    // display the instruction text
+    fill(0);
+    textSize(12);
+    text("Press 'a' or 'd' to activate sphere left-right movement", 650, 20);
+    text("Press 'w' or 's' to toggle sphere front-back movement", 650, 40);
+    text("Press 'z' or 'x' to move the camera", 650, 60);
+    text("Press 'space' to toggle air drag", 650, 80);
+
+    fill(255, 0, 0);
+    text(str(leftrightMove), 950, 20);
+    text(str(airDrag), 950, 80);
+    text(str(frontbackMove), 950, 40);
+    // text("Press '1' to toggle gravity", 10, 180);
+    // text("Press '2' to toggle wind", 10, 200);
+
 }
 
 void update(float dt) {
@@ -293,7 +308,6 @@ void checkForRipping() {
         // check if spring is too long
         float forceThreshold = 7;
         if (spring.getForce().length() > forceThreshold) {
-            println("ripped");
 
             // Add the spring to the list of springs to remove 
             springsToRemove.add(spring);
@@ -328,7 +342,6 @@ void keyPressed() {
     }
     // press space to toggle air drag
     if (key == ' ') {
-        println("Airdrag: " + airDrag);
         airDrag = !airDrag;
     }
 }
