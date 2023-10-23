@@ -14,6 +14,7 @@ class Node {
 // sphere class
 class Sphere {
   Vec3 pos;
+  Vec3 vel = new Vec3(0, 0, 0);
   float radius;
 
   Sphere(Vec3 pos, float radius) {
@@ -23,8 +24,8 @@ class Sphere {
 }
 
 // array of nodes
-int NODE_WIDTH = 32;
-int NODE_HEIGHT = 32;
+int NODE_WIDTH = 64;
+int NODE_HEIGHT = 64;
 Node[][] nodes = new Node[NODE_WIDTH][NODE_HEIGHT];
 
 // sphere
@@ -42,17 +43,17 @@ Vec3 base_pos = new Vec3(500 / scale, 1, 0);
 
 int num_substeps = 10;
 int num_relaxation_steps = 10;
-float clip_factor = 1.01;
+float clip_factor = 1.02;
 float length_error;
 float energy;
-float run_time = 30;
 long start_time, current_time;
-PrintWriter output;
+
+Camera camera;
 
 void setup() {
     size(1000, 600, P3D);
-    camera(1000.0, 300.0, 700.0, 500.0, 300.0, 0.0, 
-        0.0, 1.0, 0.0);
+    camera = new Camera();
+
     // initial pos of nodes horizontal coming out in z
     for (int i = 0; i < NODE_WIDTH; i++) {
         for (int j = 0; j < NODE_HEIGHT; j++) {
@@ -68,16 +69,24 @@ void draw() {
     // update nodes for num_substeps
     for (int i = 0; i < num_substeps; i++) update(dt / num_substeps);
 
+
+
+    camera.Update(1.0/frameRate);
+
     background(255);
     noStroke();
     // lights();
     ambientLight(128, 128, 128);
     directionalLight(128, 128, 128, -1/sqrt(3), 1/sqrt(3), -1/sqrt(3));
+    spotLight(128, 128, 128, 700, 0, 200, 0, 1, 0, PI/2.0, 1);
+    spotLight(128, 128, 128, 400, 0, 0, 1, 1, 1, PI/2.0, 1);
 
     // draw a sphere to collide with
     fill(100, 0, 200);
     pushMatrix();
     translate(sphere1.pos.x * scale, sphere1.pos.y * scale, sphere1.pos.z * scale);
+    specular(255, 255, 255);
+    shininess(5.0);
     sphere(sphere1.radius * scale);
     popMatrix();
 
@@ -85,7 +94,8 @@ void draw() {
     for (int i = 0; i < NODE_WIDTH - 1; i++) {
         for (int j = 0; j < NODE_HEIGHT - 1; j++) {
             // draw triangle
-            fill(0, 200, 200, 150);
+            fill(0, 150, 150, 200);
+            shininess(0.1);
             beginShape(TRIANGLES);
             vertex(nodes[i][j].pos.x * scale, nodes[i][j].pos.y * scale, nodes[i][j].pos.z * scale);
             vertex(nodes[i][j+1].pos.x * scale, nodes[i][j+1].pos.y * scale, nodes[i][j+1].pos.z * scale);
@@ -102,6 +112,9 @@ void draw() {
 }
 
 void update(float dt) {
+    // update sphere
+    sphere1.pos = sphere1.pos.add_new(sphere1.vel.mul_new(dt));
+
     // update node positions
     for (int i = 0; i < NODE_WIDTH; i++) {
         for (int j = 1; j < NODE_HEIGHT; j++) {
@@ -170,5 +183,25 @@ void relax() {
     for (int i = 0; i < NODE_HEIGHT; i++) {
         nodes[i][0].pos.y = 1;
         nodes[i][0].pos.x = 5;
+        nodes[i][0].pos.z = i * link_length;
+    }
+}
+
+void keyPressed() {
+    camera.HandleKeyPressed();
+    // if z move the sphere left
+    if (key == 'z') {
+        sphere1.vel.x = -1.5;
+    } else if (key == 'x') {
+        sphere1.vel.x = 1.5;
+    }
+}
+
+void keyReleased() {
+    camera.HandleKeyReleased();
+    if (key == 'z') {
+        sphere1.vel.x = 0;
+    } else if (key == 'x') {
+        sphere1.vel.x = 0;
     }
 }
