@@ -1,27 +1,3 @@
-// node class
-class Node {
-  Vec3 pos;
-  Vec3 vel;
-  Vec3 last_pos;
-
-  Node(Vec3 pos) {
-    this.pos = pos;
-    this.vel = new Vec3(0, 0, 0);
-    this.last_pos = pos;
-  }
-}
-
-// sphere class
-class Sphere {
-  Vec3 pos;
-  Vec3 vel = new Vec3(0, 0, 0);
-  float radius;
-
-  Sphere(Vec3 pos, float radius) {
-    this.pos = pos;
-    this.radius = radius;
-  }
-}
 
 // array of nodes
 int NODE_WIDTH = 64;
@@ -29,7 +5,7 @@ int NODE_HEIGHT = 64;
 Node[][] nodes = new Node[NODE_WIDTH][NODE_HEIGHT];
 
 // sphere
-Sphere sphere1 = new Sphere(new Vec3(7.0, 3, 2), 1);
+Sphere sphere1 = new Sphere(new Vec3(7.0, 3, 2), 0.5);
 
 // Link length
 float link_length = 4.0 / (NODE_WIDTH - 1);
@@ -48,6 +24,16 @@ float length_error;
 float energy;
 long start_time, current_time;
 
+PrintWriter output;
+
+boolean scene3d = true;
+boolean leftrightMove = false;
+boolean frontbackMove = false;
+
+ArrayList<Spring> springs = new ArrayList<Spring>();
+ArrayList<Spring> springsToRemove = new ArrayList<Spring>();
+ArrayList<Node> tornNodes = new ArrayList<Node>();
+
 Camera camera;
 
 void setup() {
@@ -58,6 +44,18 @@ void setup() {
     for (int i = 0; i < NODE_WIDTH; i++) {
         for (int j = 0; j < NODE_HEIGHT; j++) {
             nodes[i][j] = new Node(new Vec3(j * link_length + width / 2 / scale , 1, i * link_length));
+
+            // Connect nodes horizontally (create springs)
+            if (i > 0) {
+                Spring horizontalSpring = new Spring(nodes[i][j], nodes[i - 1][j], link_length, 100);
+                springs.add(horizontalSpring);
+            }
+
+            // Connect nodes vertically (create springs)
+            if (j > 0) {
+                Spring verticalSpring = new Spring(nodes[i][j], nodes[i][j - 1], link_length, 100);
+                springs.add(verticalSpring);
+            }
         }
     }
 
@@ -68,8 +66,6 @@ void setup() {
 void draw() {
     // update nodes for num_substeps
     for (int i = 0; i < num_substeps; i++) update(dt / num_substeps);
-
-
 
     camera.Update(1.0/frameRate);
 
@@ -90,23 +86,105 @@ void draw() {
     sphere(sphere1.radius * scale);
     popMatrix();
 
+    ArrayList<Vec3[]> detachedTriangles = new ArrayList<Vec3[]>();
+
+    // // draw triangles for groups of 3 nodes
+    // for (int i = 0; i < NODE_WIDTH - 1; i++) {
+    //     for (int j = 0; j < NODE_HEIGHT - 1; j++) {
+    //         // draw triangle
+    //         fill(0, 150, 150, 200);
+    //         shininess(0.1);
+    //         beginShape(TRIANGLES);
+    //         vertex(nodes[i][j].pos.x * scale, nodes[i][j].pos.y * scale, nodes[i][j].pos.z * scale);
+    //         vertex(nodes[i][j+1].pos.x * scale, nodes[i][j+1].pos.y * scale, nodes[i][j+1].pos.z * scale);
+    //         vertex(nodes[i+1][j].pos.x * scale, nodes[i+1][j].pos.y * scale, nodes[i+1][j].pos.z * scale);
+    //         endShape();
+    //         beginShape(TRIANGLES);
+    //         vertex(nodes[i+1][j].pos.x * scale, nodes[i+1][j].pos.y * scale, nodes[i+1][j].pos.z * scale);
+    //         vertex(nodes[i][j+1].pos.x * scale, nodes[i][j+1].pos.y * scale, nodes[i][j+1].pos.z * scale);
+    //         vertex(nodes[i+1][j+1].pos.x * scale, nodes[i+1][j+1].pos.y * scale, nodes[i+1][j+1].pos.z * scale);
+    //         endShape();
+    //     }
+    // }
     // draw triangles for groups of 3 nodes
     for (int i = 0; i < NODE_WIDTH - 1; i++) {
         for (int j = 0; j < NODE_HEIGHT - 1; j++) {
-            // draw triangle
-            fill(0, 150, 150, 200);
-            shininess(0.1);
-            beginShape(TRIANGLES);
-            vertex(nodes[i][j].pos.x * scale, nodes[i][j].pos.y * scale, nodes[i][j].pos.z * scale);
-            vertex(nodes[i][j+1].pos.x * scale, nodes[i][j+1].pos.y * scale, nodes[i][j+1].pos.z * scale);
-            vertex(nodes[i+1][j].pos.x * scale, nodes[i+1][j].pos.y * scale, nodes[i+1][j].pos.z * scale);
-            endShape();
-            beginShape(TRIANGLES);
-            vertex(nodes[i+1][j].pos.x * scale, nodes[i+1][j].pos.y * scale, nodes[i+1][j].pos.z * scale);
-            vertex(nodes[i][j+1].pos.x * scale, nodes[i][j+1].pos.y * scale, nodes[i][j+1].pos.z * scale);
-            vertex(nodes[i+1][j+1].pos.x * scale, nodes[i+1][j+1].pos.y * scale, nodes[i+1][j+1].pos.z * scale);
-            endShape();
+            Vec3[] triangle = new Vec3[3];
+            triangle[0] = nodes[i][j].pos;
+            triangle[1] = nodes[i][j+1].pos;
+            triangle[2] = nodes[i+1][j].pos;
+
+            // Check if any of the nodes in the triangle is torn
+            boolean triangleHasTornNode = false;
+            if (nodes[i][j].isTorn || nodes[i][j+1].isTorn || nodes[i+1][j].isTorn) {
+                triangleHasTornNode = true;
+            }
+
+            if (!triangleHasTornNode) {
+                fill(0, 200, 200, 150);
+                beginShape(TRIANGLES);
+                vertex(triangle[0].x * scale, triangle[0].y * scale, triangle[0].z * scale);
+                vertex(triangle[1].x * scale, triangle[1].y * scale, triangle[1].z * scale);
+                vertex(triangle[2].x * scale, triangle[2].y * scale, triangle[2].z * scale);
+                endShape();
+            } else {
+                // If the triangle has torn nodes, add it to the detachedTriangles list
+                detachedTriangles.add(triangle);
+            }
+
+            Vec3[] triangle2 = new Vec3[3];
+            triangle2[0] = nodes[i+1][j].pos;
+            triangle2[1] = nodes[i][j+1].pos;
+            triangle2[2] = nodes[i+1][j+1].pos;
+
+            // Check if any of the nodes in the second triangle is torn
+            boolean triangle2HasTornNode = false;
+            if (nodes[i+1][j].isTorn || nodes[i][j+1].isTorn || nodes[i+1][j+1].isTorn) {
+                triangle2HasTornNode = true;
+            }
+
+            if (!triangle2HasTornNode) {
+                fill(0, 200, 200, 150);
+                beginShape(TRIANGLES);
+                vertex(triangle2[0].x * scale, triangle2[0].y * scale, triangle2[0].z * scale);
+                vertex(triangle2[1].x * scale, triangle2[1].y * scale, triangle2[1].z * scale);
+                vertex(triangle2[2].x * scale, triangle2[2].y * scale, triangle2[2].z * scale);
+                endShape();
+            } else {
+                // If the second triangle has torn nodes, add it to the detachedTriangles list
+                detachedTriangles.add(triangle2);
+            }
+            
         }
+    }
+
+    // // Update the positions of detached triangles
+    // for (Vec3[] triangle : detachedTriangles) {
+    //     for (int k = 0; k < 3; k++) {
+    //         // Simulate falling freely by applying gravity
+    //         triangle[k].add(gravity);  // Adjust the vector according to the desired fall speed
+    //     }
+    // }
+
+    // // Render the detached triangles
+    // fill(0, 200, 200, 150);
+    // for (Vec3[] triangle : detachedTriangles) {
+    //     beginShape(TRIANGLES);
+    //     for (int k = 0; k < 3; k++) {
+    //         vertex(triangle[k].x * scale, triangle[k].y * scale, triangle[k].z * scale);
+    //     }
+    //     endShape();
+    // }
+
+    // Clear the detachedTriangles list for the next frame
+    // detachedTriangles.clear();
+    // Render the removed springs
+    stroke(255, 0, 0);  // Red color for removed springs
+    strokeWeight(2);
+
+    for (Spring spring : springsToRemove) {
+        line(spring.node1.pos.x * scale, spring.node1.pos.y * scale, spring.node1.pos.z * scale,
+             spring.node2.pos.x * scale, spring.node2.pos.y * scale, spring.node2.pos.z * scale);
     }
 
 }
@@ -154,6 +232,21 @@ void update(float dt) {
     for (int i = 0; i < NODE_HEIGHT; i++) {
         nodes[i][0].vel = new Vec3(0, 0, 0);
     }
+
+    // update the sphere position along with mouse
+    Vec3 mouse_pos = new Vec3(5, 3, 2);
+    if (leftrightMove) { // move sphere left and right
+        mouse_pos.z = (width - 500 - mouseX) / scale;
+        mouse_pos.x = 5;
+    }
+    if (frontbackMove) { // move sphere front and back
+        mouse_pos.x = mouseX / scale * 0.8;
+        mouse_pos.z = 2;
+    }
+
+    sphere1.pos = mouse_pos;
+
+    checkForRipping();
 }
 
 void relax() {
@@ -187,6 +280,32 @@ void relax() {
     }
 }
 
+void checkForRipping() {
+    
+    for (Spring spring : springs) {
+        spring.calculateForce();
+
+        // println(spring.getForce().length());
+        // check if spring is too long
+        float forceThreshold = 7;
+        if (spring.getForce().length() > forceThreshold) {
+            println("ripped");
+
+            // Add the spring to the list of springs to remove 
+            springsToRemove.add(spring);
+        
+            // Mark the nodes as torn
+            spring.node1.isTorn = true;
+            spring.node2.isTorn = true;
+
+        }
+    }
+
+    for (Spring spring : springsToRemove) {
+        springs.remove(spring);
+    }
+}
+
 void keyPressed() {
     camera.HandleKeyPressed();
     // if z move the sphere left
@@ -194,6 +313,14 @@ void keyPressed() {
         sphere1.vel.x = -1.5;
     } else if (key == 'x') {
         sphere1.vel.x = 1.5;
+    }
+    if (key == 'a' || key == 'd') {
+        leftrightMove = !leftrightMove;
+        frontbackMove = false;
+    }
+    if (key == 'w' || key == 's') {
+        frontbackMove = !frontbackMove;
+        leftrightMove = false;
     }
 }
 
