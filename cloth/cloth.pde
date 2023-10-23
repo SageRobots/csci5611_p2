@@ -2,6 +2,9 @@
 // array of nodes
 int NODE_WIDTH = 64;
 int NODE_HEIGHT = 64;
+int rip_height = 0;
+int rip_width = 0;
+boolean rip = false;
 Node[][] nodes = new Node[NODE_WIDTH][NODE_HEIGHT];
 
 // sphere
@@ -76,6 +79,11 @@ void draw() {
 
     camera.Update(1.0/frameRate);
 
+    // if rip, increase rip width by 1
+    if (rip && rip_width < NODE_WIDTH) {
+        rip_width++;
+    }
+
     background(255);
     noStroke();
     // lights();
@@ -98,82 +106,32 @@ void draw() {
     // draw triangles for groups of 3 nodes
     for (int i = 0; i < NODE_WIDTH - 1; i++) {
         for (int j = 0; j < NODE_HEIGHT - 1; j++) {
+            if (j == rip_height && i < rip_width && rip) continue;
             Vec3[] triangle = new Vec3[3];
             triangle[0] = nodes[i][j].pos;
             triangle[1] = nodes[i][j+1].pos;
             triangle[2] = nodes[i+1][j].pos;
 
-            // Check if any of the nodes in the triangle is torn
-            boolean triangleHasTornNode = false;
-            if (nodes[i][j].isTorn || nodes[i][j+1].isTorn || nodes[i+1][j].isTorn) {
-                triangleHasTornNode = true;
-            }
-
-            if (!triangleHasTornNode) {
-                fill(0, 200, 200, 150);
-                beginShape(TRIANGLES);
-                vertex(triangle[0].x * scale, triangle[0].y * scale, triangle[0].z * scale);
-                vertex(triangle[1].x * scale, triangle[1].y * scale, triangle[1].z * scale);
-                vertex(triangle[2].x * scale, triangle[2].y * scale, triangle[2].z * scale);
-                endShape();
-            } else {
-                // If the triangle has torn nodes, add it to the detachedTriangles list
-                detachedTriangles.add(triangle);
-            }
+            fill(0, 200, 200, 150);
+            beginShape(TRIANGLES);
+            vertex(triangle[0].x * scale, triangle[0].y * scale, triangle[0].z * scale);
+            vertex(triangle[1].x * scale, triangle[1].y * scale, triangle[1].z * scale);
+            vertex(triangle[2].x * scale, triangle[2].y * scale, triangle[2].z * scale);
+            endShape();
 
             Vec3[] triangle2 = new Vec3[3];
             triangle2[0] = nodes[i+1][j].pos;
             triangle2[1] = nodes[i][j+1].pos;
             triangle2[2] = nodes[i+1][j+1].pos;
 
-            // Check if any of the nodes in the second triangle is torn
-            boolean triangle2HasTornNode = false;
-            if (nodes[i+1][j].isTorn || nodes[i][j+1].isTorn || nodes[i+1][j+1].isTorn) {
-                triangle2HasTornNode = true;
-            }
-
-            if (!triangle2HasTornNode) {
-                fill(0, 200, 200, 150);
-                beginShape(TRIANGLES);
-                vertex(triangle2[0].x * scale, triangle2[0].y * scale, triangle2[0].z * scale);
-                vertex(triangle2[1].x * scale, triangle2[1].y * scale, triangle2[1].z * scale);
-                vertex(triangle2[2].x * scale, triangle2[2].y * scale, triangle2[2].z * scale);
-                endShape();
-            } else {
-                // If the second triangle has torn nodes, add it to the detachedTriangles list
-                detachedTriangles.add(triangle2);
-            }
+            fill(0, 200, 200, 150);
+            beginShape(TRIANGLES);
+            vertex(triangle2[0].x * scale, triangle2[0].y * scale, triangle2[0].z * scale);
+            vertex(triangle2[1].x * scale, triangle2[1].y * scale, triangle2[1].z * scale);
+            vertex(triangle2[2].x * scale, triangle2[2].y * scale, triangle2[2].z * scale);
+            endShape();
             
         }
-    }
-
-    // // Update the positions of detached triangles
-    // for (Vec3[] triangle : detachedTriangles) {
-    //     for (int k = 0; k < 3; k++) {
-    //         // Simulate falling freely by applying gravity
-    //         triangle[k].add(gravity);  // Adjust the vector according to the desired fall speed
-    //     }
-    // }
-
-    // // Render the detached triangles
-    // fill(0, 200, 200, 150);
-    // for (Vec3[] triangle : detachedTriangles) {
-    //     beginShape(TRIANGLES);
-    //     for (int k = 0; k < 3; k++) {
-    //         vertex(triangle[k].x * scale, triangle[k].y * scale, triangle[k].z * scale);
-    //     }
-    //     endShape();
-    // }
-
-    // Clear the detachedTriangles list for the next frame
-    // detachedTriangles.clear();
-    // Render the removed springs
-    stroke(255, 0, 0);  // Red color for removed springs
-    strokeWeight(2);
-
-    for (Spring spring : springsToRemove) {
-        line(spring.node1.pos.x * scale, spring.node1.pos.y * scale, spring.node1.pos.z * scale,
-             spring.node2.pos.x * scale, spring.node2.pos.y * scale, spring.node2.pos.z * scale);
     }
 
     // display the instruction text
@@ -272,6 +230,7 @@ void relax() {
     // update nodes using position based dynamics
     for (int i = 0; i < NODE_WIDTH; i++) {
         for (int j = 1; j < NODE_HEIGHT; j++) {
+            if (j == rip_height + 1 && i < rip_width && rip) continue;
             Vec3 delta = nodes[i][j].pos.subtract_new(nodes[i][j - 1].pos);
             float delta_len = delta.length();
             float correction = delta_len - link_length;
@@ -332,13 +291,20 @@ void keyPressed() {
     } else if (key == 'x') {
         sphere1.vel.x = 1.5;
     }
-    if (key == 'a' || key == 'd') {
+    if (key == 'f' || key == 'g') {
         leftrightMove = !leftrightMove;
         frontbackMove = false;
     }
-    if (key == 'w' || key == 's') {
+    if (key == 'y' || key == 't') {
         frontbackMove = !frontbackMove;
         leftrightMove = false;
+    }
+    // if r, rip cloth
+    if (key == 'r') {
+        rip = true;
+        // random rip height
+        rip_height = (int) random(1, NODE_HEIGHT - 1);
+        rip_width = 0;
     }
     // press space to toggle air drag
     if (key == ' ') {
