@@ -30,6 +30,13 @@ boolean scene3d = true;
 boolean leftrightMove = false;
 boolean frontbackMove = false;
 
+// Air density (ρ), cross-sectional area (a), and drag coefficient (cd)
+float airDensity = 1.225;  
+float crossSectionalArea = 1.0;  
+float dragCoefficient = 0.5;  
+Vec3 windVelocity = new Vec3(1.5, 0.0, 0.0); 
+boolean airDrag = false;
+
 ArrayList<Spring> springs = new ArrayList<Spring>();
 ArrayList<Spring> springsToRemove = new ArrayList<Spring>();
 ArrayList<Node> tornNodes = new ArrayList<Node>();
@@ -88,24 +95,6 @@ void draw() {
 
     ArrayList<Vec3[]> detachedTriangles = new ArrayList<Vec3[]>();
 
-    // // draw triangles for groups of 3 nodes
-    // for (int i = 0; i < NODE_WIDTH - 1; i++) {
-    //     for (int j = 0; j < NODE_HEIGHT - 1; j++) {
-    //         // draw triangle
-    //         fill(0, 150, 150, 200);
-    //         shininess(0.1);
-    //         beginShape(TRIANGLES);
-    //         vertex(nodes[i][j].pos.x * scale, nodes[i][j].pos.y * scale, nodes[i][j].pos.z * scale);
-    //         vertex(nodes[i][j+1].pos.x * scale, nodes[i][j+1].pos.y * scale, nodes[i][j+1].pos.z * scale);
-    //         vertex(nodes[i+1][j].pos.x * scale, nodes[i+1][j].pos.y * scale, nodes[i+1][j].pos.z * scale);
-    //         endShape();
-    //         beginShape(TRIANGLES);
-    //         vertex(nodes[i+1][j].pos.x * scale, nodes[i+1][j].pos.y * scale, nodes[i+1][j].pos.z * scale);
-    //         vertex(nodes[i][j+1].pos.x * scale, nodes[i][j+1].pos.y * scale, nodes[i][j+1].pos.z * scale);
-    //         vertex(nodes[i+1][j+1].pos.x * scale, nodes[i+1][j+1].pos.y * scale, nodes[i+1][j+1].pos.z * scale);
-    //         endShape();
-    //     }
-    // }
     // draw triangles for groups of 3 nodes
     for (int i = 0; i < NODE_WIDTH - 1; i++) {
         for (int j = 0; j < NODE_HEIGHT - 1; j++) {
@@ -200,8 +189,23 @@ void update(float dt) {
             nodes[i][j].last_pos = nodes[i][j].pos;
             // update velocity with gravity
             nodes[i][j].vel = nodes[i][j].vel.add_new(gravity.mul_new(dt));
+            
+            if (airDrag) {
+                // Calculate relative velocity of the node
+                Vec3 nodeVelocity = nodes[i][j].vel;
+                Vec3 relativeVelocity = nodeVelocity.subtract_new(windVelocity);
+                float relativeVelocityMag = relativeVelocity.length();
+
+                // Calculate drag force using Lord Rayleigh's drag equation
+                Vec3 dragForce = relativeVelocity.mul_new(-0.5 * airDensity * relativeVelocityMag * relativeVelocityMag * dragCoefficient * crossSectionalArea);
+
+                // Apply the drag force to the node
+                nodes[i][j].vel = nodes[i][j].vel.add_new(dragForce.mul_new(dt));
+            }
+            
             // update position with velocity
             nodes[i][j].pos = nodes[i][j].pos.add_new(nodes[i][j].vel.mul_new(dt));
+            
         }
     }
 
@@ -321,6 +325,11 @@ void keyPressed() {
     if (key == 'w' || key == 's') {
         frontbackMove = !frontbackMove;
         leftrightMove = false;
+    }
+    // press space to toggle air drag
+    if (key == ' ') {
+        println("Airdrag: " + airDrag);
+        airDrag = !airDrag;
     }
 }
 
