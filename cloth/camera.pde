@@ -64,12 +64,12 @@ class Camera
     if ( key == 'q' || key == 'Q' ) positiveMovement.y = 1;
     if ( key == 'e' || key == 'E' ) negativeMovement.y = -1;
     
-    if ( key == 'r' || key == 'R' ){
-      Camera defaults = new Camera();
-      position = defaults.position;
-      theta = defaults.theta;
-      phi = defaults.phi;
-    }
+    // if ( key == 'r' || key == 'R' ){
+    //   Camera defaults = new Camera();
+    //   position = defaults.position;
+    //   theta = defaults.theta;
+    //   phi = defaults.phi;
+    // }
     
     if ( keyCode == LEFT )  negativeTurn.x = 1;
     if ( keyCode == RIGHT ) positiveTurn.x = -0.5;

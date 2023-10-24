@@ -43,10 +43,10 @@ public class Vec3 {
 
     public Vec3 normalize(){
         float magnitude = sqrt(x*x + y*y + z*z);
-        x /= magnitude;
-        y /= magnitude;
-        z /= magnitude;
-        return new Vec3(x, y, z);
+        float a1 = x/magnitude;
+        float a2 = y/magnitude;
+        float a3 = z/magnitude;
+        return new Vec3(a1, a2, a3);
     }
     
     public float distanceTo(Vec3 rhs){
@@ -58,6 +58,14 @@ public class Vec3 {
 
     public float lengthSqr(){
       return x*x + y*y + z*z;
+    }
+
+    public Vec3 cross(Vec3 rhs){
+      return new Vec3(y*rhs.z - z*rhs.y, z*rhs.x - x*rhs.z, x*rhs.y - y*rhs.x);
+    }
+
+    public float dot(Vec3 rhs){
+      return x*rhs.x + y*rhs.y + z*rhs.z;
     }
 }
 
